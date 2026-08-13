@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.aichat.mapper.ConversationMapper">
+
+    <!-- 会话列表(带消息数,按最近更新倒序);别名下划线,依赖 map-underscore-to-camel-case -->
+    <select id="selectAll" resultType="com.example.aichat.dto.ConversationDto">
+        SELECT c.id,
+               c.title,
+               c.game_id,
+               c.updated_at,
+               COUNT(m.id) AS message_count
+        FROM conversation c
+        LEFT JOIN chat_message m ON m.conversation_id = c.id
+        GROUP BY c.id, c.title, c.game_id, c.updated_at
+        ORDER BY c.updated_at DESC
+    </select>
+
+    <select id="selectById" resultType="com.example.aichat.entity.Conversation">
+        SELECT id, title, game_id, created_at, updated_at
+        FROM conversation WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO conversation(title, game_id, created_at, updated_at)
+        VALUES(#{title}, #{gameId}, NOW(), NOW())
+    </insert>
+
+    <update id="updateTitle">
+        UPDATE conversation SET title = #{title} WHERE id = #{id}
+    </update>
+
+    <update id="touch">
+        UPDATE conversation SET updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM conversation WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteMessages">
+        DELETE FROM chat_message WHERE conversation_id = #{conversationId}
+    </delete>
+
+</mapper>

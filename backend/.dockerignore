@@ -1,0 +1,10 @@
+# 构建上下文只保留 jar,减少上传体积
+target/classes
+target/*.original
+target/maven-status
+target/maven-archiver
+target/surefire*
+target/test-classes
+src
+pom.xml
+Dockerfile

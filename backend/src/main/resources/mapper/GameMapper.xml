@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.aichat.mapper.GameMapper">
+
+    <select id="selectGames" resultType="com.example.aichat.entity.Game">
+        SELECT id, name, category, platform, publisher, summary
+        FROM game
+        ORDER BY id DESC
+    </select>
+
+    <insert id="insertGame" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO game(name, category, platform, publisher, summary, created_at)
+        VALUES(#{name}, #{category}, #{platform}, #{publisher}, #{summary}, NOW())
+    </insert>
+
+    <delete id="deleteGame">
+        DELETE FROM game WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteChunksByGame">
+        DELETE FROM chunk WHERE game_id = #{gameId}
+    </delete>
+
+    <delete id="deleteArticlesByGame">
+        DELETE FROM article WHERE game_id = #{gameId}
+    </delete>
+
+</mapper>

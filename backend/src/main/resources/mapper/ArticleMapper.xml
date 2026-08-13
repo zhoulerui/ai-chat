@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.aichat.mapper.ArticleMapper">
+
+    <insert id="insertArticle" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article(game_id, title, type, content, created_at)
+        VALUES(#{gameId}, #{title}, #{type}, #{content}, NOW())
+    </insert>
+
+    <!-- 条目列表:LEFT JOIN 统计分块数,有分块且含 embedding 视为已向量化 -->
+    <select id="selectArticlesByGame" resultType="com.example.aichat.dto.ArticleItem">
+        SELECT a.id,
+               a.game_id,
+               a.title,
+               a.type,
+               a.content,
+               COUNT(c.id) AS chunkCount,
+               CASE WHEN COUNT(c.id) &gt; 0 AND MAX(c.embedding) IS NOT NULL THEN 1 ELSE 0 END AS vectorized
+        FROM article a
+        LEFT JOIN chunk c ON c.article_id = a.id
+        WHERE a.game_id = #{gameId}
+        GROUP BY a.id, a.game_id, a.title, a.type, a.content
+        ORDER BY a.id DESC
+    </select>
+
+    <delete id="deleteArticle">
+        DELETE FROM article WHERE id = #{id}
+    </delete>
+
+</mapper>

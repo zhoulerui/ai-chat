@@ -1,0 +1,26 @@
+# ---- 前端 ----
+frontend/node_modules/
+frontend/dist/
+# 前端构建产物会进 backend/static(单 jar 部署),不提交,由 npm run build 生成
+backend/src/main/resources/static/
+
+# ---- 后端构建产物 ----
+backend/target/
+*.log
+*.tmp
+
+# ---- IDE / 系统 ----
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- 本地临时 ----
+.tmp/
+.tmp/**
+*.bak
+
+# ---- 密钥与敏感信息(如有) ----
+*.env
+.env

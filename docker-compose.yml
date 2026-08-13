@@ -1,0 +1,37 @@
+# ai-chat Docker Compose
+# 宿主机 8080 被占用 -> 映射到 8082(改这里即可换端口)
+# 模型文件(model.onnx + tokenizer.json)放在宿主机 /opt/ai-chat/models,
+# 通过 volumes 挂载进容器(容器内路径与 application.yml 默认值一致)。
+#
+# MySQL 连接(重点):服务器上的 MySQL 是容器 you-mysql(仅绑定 127.0.0.1:3306),
+# 因此 ai-chat 容器加入 you-mysql 所在 Docker 网络,用容器名 you-mysql 直连。
+# 操作:
+#   1) 查 you-mysql 网络名:docker inspect you-mysql --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+#   2) 把下方 you-mysql-net 的 name 改成查询结果(如 you_default)
+#   3) MYSQL_URL 的 host 用 you-mysql;MYSQL_PASSWORD 填 MySQL 实际密码
+#   4) docker compose up -d 重建(无需 --build)
+services:
+  ai-chat:
+    build: ./backend
+    image: ai-chat:1.0.0
+    container_name: ai-chat
+    ports:
+      - "8082:8080"          # 宿主机 8082 -> 容器 8080
+    volumes:
+      - /opt/ai-chat/models:/opt/ai-chat/models   # 本地嵌入模型挂载(必须)
+    networks:
+      - default
+      - you-mysql-net        # 与 you-mysql 同网络,容器名直连
+    environment:
+      # ↓↓↓ 按你的服务器实际值修改 ↓↓↓
+      MYSQL_URL: "jdbc:mysql://you-mysql:3306/ai_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+      MYSQL_USER: "root"
+      MYSQL_PASSWORD: "zlr930707"     # ← you-mysql 的 root 密码(必填)
+    mem_limit: 400m           # 容器内存上限,保护 2G 小服务器
+    restart: unless-stopped
+
+networks:
+  default: {}
+  you-mysql-net:
+    external: true
+    name: ai-chat_default        # ← 改成第 1 步查到的 you-mysql 网络名

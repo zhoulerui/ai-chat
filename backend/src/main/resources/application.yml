@@ -1,0 +1,55 @@
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: text/plain,text/html,text/css,application/javascript,application/json
+
+spring:
+  application:
+    name: oracle-games   # 神谕百科 Oracle of Games
+  ai:
+    openai:
+      # OpenAI 兼容接口:DeepSeek / 通义 / Kimi / 硅基流动 等均可
+      base-url: ${AI_BASE_URL:https://api.deepseek.com}
+      api-key: ${AI_API_KEY:sk-b7405a645ad84df1b93bdefc433aa66d}
+      chat:
+        options:
+          model: ${AI_MODEL:deepseek-v4-flash}
+          temperature: 0.7
+          max-tokens: 2048
+  # 生产数据库(MySQL)。本地验证用 application-local.yml(H2)
+  # 首次部署需在 MySQL 建库(或手动执行,账号需建库权限):
+  #   CREATE DATABASE IF NOT EXISTS ai_chat CHARACTER SET utf8mb4;
+  # 注意:characterEncoding 只接受 Java 字符集名(utf8/UTF-8),Connector/J 9.x
+  # 会与服务器协商为 utf8mb4(emoji 正常);写 utf8mb4 会报
+  # "Unsupported character encoding 'utf8mb4'"(utf8mb4 不是 Java 字符集名)。
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always          # 启动时执行 schema.sql(建表,幂等)
+  servlet:
+    multipart:
+      max-file-size: 20MB   # 单个上传文件上限(PDF/文档可能较大)
+      max-request-size: 50MB
+
+# 本地嵌入模型(ONNX,纯 Java)
+ai-chat:
+  onnx:
+    model-path: ${AI_MODEL_PATH:/opt/ai-chat/models/bge-small-zh-v1.5/model.onnx}
+    tokenizer-path: ${AI_TOKENIZER_PATH:/opt/ai-chat/models/bge-small-zh-v1.5/tokenizer.json}
+
+# MyBatis
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+logging:
+  level:
+    root: info
+    com.example.aichat: debug          # 业务日志 + MyBatis SQL 日志(debug 时打印)
