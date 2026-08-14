@@ -45,9 +45,9 @@ pipeline {
         stage('Docker 部署') {
             steps {
                 sh '''
-                    docker compose down || true          # 停旧容器(数据在 MySQL,安全)
-                    docker compose up -d --build
-                    docker compose ps
+                    docker-compose down || true          # 停旧容器(数据在 MySQL,安全。部署阶段的命令改为旧版语法)
+                    docker-compose up -d --build
+                    docker-compose ps
                 '''
             }
         }
