@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.example.aichat.dto.ChatMessageDto;
@@ -42,6 +45,7 @@ import reactor.core.publisher.Flux;
  * 可选 RAG:带 gameId 时检索游戏知识库拼进 SystemMessage;
  * 带 conversationId 时,回答完成/停止后自动持久化本轮问答。
  */
+@Tag(name = "智能问答", description = "SSE 流式问答 + 多会话管理")
 @RestController
 @RequestMapping("/api/chat")
 public class ChatController {
@@ -62,11 +66,13 @@ public class ChatController {
 
     // ---------- 会话管理 ----------
 
+    @Operation(summary = "会话列表", description = "含消息数,按最近更新倒序")
     @GetMapping("/conversations")
     public List<ConversationDto> conversations() {
         return conversationService.listConversations();
     }
 
+    @Operation(summary = "新建会话", description = "body 可选: {title?, gameId?}")
     @PostMapping("/conversations")
     public Map<String, Object> createConversation(@RequestBody(required = false) Map<String, Object> body) {
         String title = body == null ? null : (String) body.get("title");
@@ -76,11 +82,13 @@ public class ChatController {
         return Map.of("id", id);
     }
 
+    @Operation(summary = "历史消息", description = "含 references(参考来源 JSON)")
     @GetMapping("/conversations/{id}/messages")
     public List<ChatMessage> messages(@PathVariable Long id) {
         return conversationService.listMessages(id);
     }
 
+    @Operation(summary = "重命名会话", description = "body: {title}")
     @PatchMapping("/conversations/{id}")
     public Map<String, Object> renameConversation(@PathVariable Long id,
                                                   @RequestBody Map<String, Object> body) {
@@ -88,6 +96,7 @@ public class ChatController {
         return Map.of("ok", true);
     }
 
+    @Operation(summary = "删除会话", description = "级联删除全部消息")
     @DeleteMapping("/conversations/{id}")
     public Map<String, Object> deleteConversation(@PathVariable Long id) {
         conversationService.deleteConversation(id);
@@ -96,6 +105,7 @@ public class ChatController {
 
     // ---------- 流式问答 ----------
 
+    @Operation(summary = "流式问答(SSE)", description = "body: {gameId?, conversationId?, messages:[{role,content}]};gameId 触发 RAG 检索并推送 references 事件;conversationId 使本轮问答自动落库")
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestBody ChatRequestDto request) {
         SseEmitter emitter = new SseEmitter(0L); // 0 = 不超时,等待模型输出

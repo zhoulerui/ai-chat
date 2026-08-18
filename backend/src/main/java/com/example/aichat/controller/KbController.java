@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.aichat.dto.ArticleItem;
@@ -31,6 +34,7 @@ import com.example.aichat.util.UrlImporter;
 /**
  * 神谕百科知识库接口:游戏管理、百科条目、文档上传入库、检索测试。
  */
+@Tag(name = "知识库", description = "游戏管理 / 条目 / 分块 / 检索 / 网址一键入库")
 @RestController
 @RequestMapping("/api/kb")
 public class KbController {
@@ -49,11 +53,13 @@ public class KbController {
 
     // ---------- 游戏 ----------
 
+    @Operation(summary = "游戏列表", description = "全部游戏,供问答页下拉选择")
     @GetMapping("/game")
     public List<Game> listGames() {
         return gameMapper.selectGames();
     }
 
+    @Operation(summary = "新建游戏", description = "body: {\"name\": \"原神\"}")
     @PostMapping("/game")
     public Map<String, Object> createGame(@RequestBody Map<String, Object> body) {
         String name = (String) body.get("name");
@@ -71,6 +77,7 @@ public class KbController {
         return Map.of("id", g.getId(), "name", name);
     }
 
+    @Operation(summary = "删除游戏", description = "级联删除其条目/分块")
     @DeleteMapping("/game/{id}")
     public Map<String, Object> deleteGame(@PathVariable Long id) {
         ragService.deleteGame(id);   // 级联删除 + 事务在 Service 层
@@ -81,6 +88,7 @@ public class KbController {
 
     // ---------- 文档上传(支持 txt/md/pdf/docx/xlsx 等,见 DocParser) ----------
 
+    @Operation(summary = "上传文档入库", description = "multipart: gameId + file + 可选 title;支持 txt/md/pdf/docx/xlsx/csv")
     @PostMapping("/upload")
     public Map<String, Object> upload(
             @RequestParam("gameId") Long gameId,
@@ -112,12 +120,14 @@ public class KbController {
     // ---------- 百科条目 ----------
 
     /** 按游戏查全部条目(含分块数/向量化状态),知识库页主列表 */
+    @Operation(summary = "条目列表", description = "按游戏查询,含分块数与已向量化状态")
     @GetMapping("/articles")
     public List<ArticleItem> articles(@RequestParam Long gameId) {
         return articleMapper.selectArticlesByGame(gameId);
     }
 
     /** 删除条目及其分块(级联,事务在 Service 层) */
+    @Operation(summary = "删除条目", description = "级联删除分块并重建内存向量库")
     @DeleteMapping("/article/{id}")
     public Map<String, Object> deleteArticle(@PathVariable Long id) {
         ragService.deleteArticle(id);
@@ -125,6 +135,7 @@ public class KbController {
     }
 
     /** 网页一键入库(SSRF 防护 + 正文提取) */
+    @Operation(summary = "网址一键入库", description = "body: {gameId, url, title?};仅公网 http/https(SSRF 防护),自动提取标题与正文")
     @PostMapping("/import-url")
     public Map<String, Object> importUrl(@RequestBody Map<String, Object> body) throws IOException {
         Long gameId = body.get("gameId") == null ? null : Long.valueOf(body.get("gameId").toString());
@@ -149,17 +160,20 @@ public class KbController {
 
     // ---------- chunk ----------
 
+    @Operation(summary = "分块列表", description = "可选按 gameId 过滤")
     @GetMapping("/chunks")
     public List<Chunk> chunks(@RequestParam(required = false) Long gameId) {
         return ragService.listChunks(gameId);
     }
 
+    @Operation(summary = "删除分块", description = "删除单个分块并重建向量库(重传时用)")
     @DeleteMapping("/chunk/{id}")
     public Map<String, Object> deleteChunk(@PathVariable Long id) {
         ragService.deleteChunk(id);
         return Map.of("ok", true);
     }
 
+    @Operation(summary = "检索测试", description = "body: {gameId, query, topK};返回命中分块+相似度+完整正文回溯")
     @PostMapping("/search")
     public List<ChunkHit> search(@RequestBody Map<String, Object> body) {
         Long gameId = body.get("gameId") == null ? null : Long.valueOf(body.get("gameId").toString());

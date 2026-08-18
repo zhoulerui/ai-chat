@@ -36,6 +36,15 @@ spring:
       max-file-size: 20MB   # 单个上传文件上限(PDF/文档可能较大)
       max-request-size: 50MB
 
+# API 文档(springdoc-openapi / Swagger UI)
+# 入口:http://host:port/swagger-ui.html 与 /v3/api-docs
+# 生产环境想关闭,把 enabled 改成 false 即可(需重新打包)
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    path: /swagger-ui.html
+
 # 本地嵌入模型(ONNX,纯 Java)
 ai-chat:
   onnx:

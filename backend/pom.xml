@@ -84,6 +84,12 @@
             <artifactId>jsoup</artifactId>
             <version>1.17.2</version>
         </dependency>
+        <!-- API 文档:springdoc-openapi(Swagger UI + /v3/api-docs) -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.8.9</version>
+        </dependency>
     </dependencies>
 
     <build>

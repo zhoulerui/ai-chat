@@ -179,6 +179,13 @@ cd frontend && npm run dev
 
 ## 接口说明
 
+> 已集成 **Swagger 文档**(springdoc-openapi),浏览器打开即可交互式调试所有接口:
+>
+> - UI: `http://<host>:8082/swagger-ui.html`
+> - JSON: `http://<host>:8082/v3/api-docs`
+>
+> 生产环境想关闭:把 `application.yml` 的 `springdoc.api-docs.enabled` 改为 `false` 并重新打包。
+
 ### 智能问答
 
 `POST /api/chat/stream` —— 请求体:
