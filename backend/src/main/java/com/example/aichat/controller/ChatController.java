@@ -12,7 +12,9 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -55,13 +57,16 @@ public class ChatController {
     private final ChatModel chatModel;
     private final RagService ragService;
     private final ConversationService conversationService;
+    private final ToolCallbackProvider toolCallbackProvider;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public ChatController(ChatModel chatModel, RagService ragService,
-                          ConversationService conversationService) {
+                          ConversationService conversationService,
+                          ToolCallbackProvider toolCallbackProvider) {
         this.chatModel = chatModel;
         this.ragService = ragService;
         this.conversationService = conversationService;
+        this.toolCallbackProvider = toolCallbackProvider;
     }
 
     // ---------- 会话管理 ----------
@@ -144,7 +149,7 @@ public class ChatController {
                 .map(this::toSpringMessage)
                 .forEach(messages::add);
 
-        Flux<String> tokens = chatModel.stream(new Prompt(messages))
+        Flux<String> tokens = chatModel.stream(new Prompt(messages, buildToolOptions()))
                 // mapNotNull:流式最后一个 chunk 通常没有文本(只带 finish_reason/usage),
                 // getText() 会返回 null,而 map() 不允许返回 null,必须用 mapNotNull 跳过
                 .mapNotNull(response -> {
@@ -201,6 +206,17 @@ public class ChatController {
         });
 
         return emitter;
+    }
+
+    /**
+     * 挂载 Agent 工具(Function Calling):
+     * 模型按需调用 GameTools(@Tool 方法),Spring AI 1.0 在流式过程中自动执行
+     * 工具并继续生成最终回答(内部工具调用循环),前端无感知、仍是普通文本流。
+     */
+    private ToolCallingChatOptions buildToolOptions() {
+        return ToolCallingChatOptions.builder()
+                .toolCallbacks(toolCallbackProvider.getToolCallbacks())
+                .build();
     }
 
     private Message toSpringMessage(ChatMessageDto dto) {
