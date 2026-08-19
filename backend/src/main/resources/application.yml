@@ -62,3 +62,8 @@ logging:
   level:
     root: info
     com.example.aichat: debug          # 业务日志 + MyBatis SQL 日志(debug 时打印)
+  # 日志落盘:默认 /opt/ai-chat/logs/ai-chat.log(Docker 部署时由 compose volume 挂到宿主机,
+  # 宿主 tail -f 即可查看);本地开发用 application-local.yml 覆盖为相对路径 logs/。
+  # 可用环境变量 AI_LOG_PATH 覆盖。
+  file:
+    name: ${AI_LOG_PATH:/opt/ai-chat/logs/ai-chat.log}

@@ -152,7 +152,8 @@ docker run -d --name ai-chat \
 | 命令                               | 说明               |
 | -------------------------------- | ---------------- |
 | `docker compose ps`              | 查看状态             |
-| `docker compose logs -f ai-chat` | 看日志              |
+| `docker compose logs -f ai-chat` | 看日志(docker logs) |
+| `tail -f /opt/ai-chat/logs/ai-chat.log` | 看落盘日志(持久,推荐) |
 | `docker compose restart`         | 重启               |
 | `docker compose down`            | 停止并删除容器(数据在 MySQL,可随意) |
 | `docker compose up -d --build`   | 更新镜像并重建          |

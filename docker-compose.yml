@@ -18,7 +18,13 @@ services:
     ports:
       - "8082:8080"          # 宿主机 8082 -> 容器 8080
     volumes:
-      - /opt/ai-chat/models:/opt/ai-chat/models   # 本地嵌入模型挂载(必须)
+      - /opt/ai-chat/models:/opt/ai-chat/models        # 本地嵌入模型挂载(必须)
+      - /opt/ai-chat/logs:/opt/ai-chat/logs            # 应用日志落盘(宿主 tail -f 查看)
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"        # docker logs 本身也限容,防止 /var/lib/docker 膨胀
+        max-file: "5"
     networks:
       - default
       - you-mysql-net        # 与 you-mysql 同网络,容器名直连

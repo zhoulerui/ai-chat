@@ -12,3 +12,8 @@ ai-chat:
   onnx:
     model-path: ${AI_MODEL_PATH:D:\self-project\LLM-demo\.tmp\bge\model.onnx}
     tokenizer-path: ${AI_TOKENIZER_PATH:D:\self-project\LLM-demo\.tmp\bge\tokenizer.json}
+
+# 本地日志写到工作目录 logs/(相对路径),不写生产路径
+logging:
+  file:
+    name: logs/ai-chat.log

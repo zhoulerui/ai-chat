@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  神谕百科 logback 日志配置
+  - 控制台 + 文件双输出(复用 Spring Boot 默认格式,文件按天滚动)
+  - 全量日志:ai-chat.log(按天滚动,保留 14 天)
+  - 错误日志:ai-chat.log.error(只收 ERROR 级,独立归档,保留 14 天)
+  - 文件路径引用 application.yml 的 logging.file.name(可被 AI_LOG_PATH 覆盖)
+-->
+<configuration>
+    <springProperty name="LOG_FILE" source="logging.file.name"
+                    defaultValue="/opt/ai-chat/logs/ai-chat.log"/>
+
+    <!-- 复用 Spring Boot 默认日志格式与控制台 appender -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- 全量日志文件:按天滚动 -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>14</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 错误日志:只收 ERROR,独立归档 -->
+    <appender name="ERR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}.error</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}.error.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>14</maxHistory>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- root 级别由 application.yml 的 logging.level 覆盖 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="ERR_FILE"/>
+    </root>
+</configuration>
