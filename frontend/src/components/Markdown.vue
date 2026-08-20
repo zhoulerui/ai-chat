@@ -166,7 +166,7 @@ async function addCopyButtons() {
   padding: 12px 14px;
   overflow-x: auto;
   margin: 8px 0;
-  line-height: 1.6;
+  line-height: normal;
 }
 .markdown-body :deep(pre.hljs-pre code) {
   background: none;
@@ -250,15 +250,15 @@ async function addCopyButtons() {
 .markdown-body > :first-child { margin-top: 0; }
 .markdown-body > :last-child { margin-bottom: 0; }
 
-.markdown-body p { margin: 4px 0; line-height: 1.45; overflow-wrap: anywhere; }
-.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 6px 0 6px; font-weight: 500; }
+.markdown-body p { margin: 4px 0; line-height: normal; overflow-wrap: anywhere; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 2px 0 6px; font-weight: 500; }
 .markdown-body h1 { font-size: 20px; }
 .markdown-body h2 { font-size: 19px; }
 .markdown-body h3 { font-size: 17px; }
 
 /* 列表:彻底去掉圆点/数字标记,保留缩进 */
 .markdown-body ul, .markdown-body ol { margin: 0 0; padding-left: 16px; list-style: none; line-height: 0;}
-.markdown-body li { margin: 2px 0; overflow-wrap: anywhere; line-height: 1.45; }
+.markdown-body li { margin: 2px 0; overflow-wrap: anywhere; line-height: normal; }
 .markdown-body li > p { margin: 4px 0; }
 .markdown-body li > ul, .markdown-body li > ol { margin: 4px 0; list-style: none; }
 
@@ -272,11 +272,11 @@ async function addCopyButtons() {
   word-break: break-all;
 }
 .markdown-body pre code { background: none; border: none; padding: 0; font-size: 15px; white-space: pre; word-break: normal; }
-.markdown-body blockquote { border-left: 3px solid var(--border-2); padding-left: 12px; color: var(--text-2); margin: 8px 0; overflow-wrap: anywhere; }
+.markdown-body blockquote { border-left: 3px solid var(--border-2); padding-left: 12px; color: var(--text-2); margin: 2px 0; overflow-wrap: anywhere; }
 .markdown-body table { border-collapse: collapse; margin: 8px 0; display: block; overflow-x: auto; max-width: 100%; }
 .markdown-body th, .markdown-body td { border: 1px solid var(--border); padding: 4px 10px; font-size: 15px; overflow-wrap: anywhere; }
 .markdown-body th { background: var(--surface-2); }
 .markdown-body a { color: var(--primary); word-break: break-all; }
 .markdown-body img { max-width: 100%; border-radius: 8px; }
-.markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+.markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 2px 0; }
 </style>

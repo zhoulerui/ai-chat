@@ -568,7 +568,7 @@ onMounted(async () => {
   padding: 12px 16px;
   border-radius: 14px;
   font-size: 16px;
-  line-height: 1.7;
+  line-height: normal;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
