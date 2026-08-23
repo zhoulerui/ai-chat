@@ -10,7 +10,7 @@ backend/target/
 *.tmp
 
 # ---- logback 日志 ----
-backend\logs
+backend/logs
 
 # ---- IDE / 系统 ----
 .idea/
