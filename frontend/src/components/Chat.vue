@@ -69,7 +69,16 @@ async function loadMessages(convId) {
     const msgs = (list || []).map(m => {
       const msg = { role: m.role, content: m.content }
       if (m.role === 'assistant' && m.referencesJson) {
-        try { msg.references = JSON.parse(m.referencesJson) } catch { msg.references = [] }
+        try {
+          const parsed = JSON.parse(m.referencesJson)
+          // 兼容新旧格式:新格式 {references:[...], reasoning:"..."},旧格式裸数组
+          if (Array.isArray(parsed)) {
+            msg.references = parsed
+          } else {
+            msg.references = parsed.references || []
+            if (parsed.reasoning) msg.reasoning = parsed.reasoning
+          }
+        } catch { msg.references = [] }
       }
       return msg
     })
@@ -147,6 +156,13 @@ const messages = ref([
 const input = ref('')
 const loading = ref(false)
 const listEl = ref(null)
+// 模型档位:fast=快速(deepseek-chat) / deep=深度思考(deepseek-v4-flash) / pro=旗舰深度思考(deepseek-v4-pro)
+const modelId = ref('fast')
+const modelOptions = [
+  { id: 'fast', label: '⚡ 快速', hint: 'deepseek-chat' },
+  { id: 'deep', label: '🧠 深度思考', hint: 'deepseek-v4-flash' },
+  { id: 'pro', label: '🚀 Pro 深度思考', hint: 'deepseek-v4-pro' }
+]
 
 let abortCtrl = null
 let recognition = null
@@ -183,12 +199,19 @@ async function send() {
   loading.value = true
 
   const ai = messages.value[messages.value.length - 1]
+  // 深度思考模型:预留思考过程容器(有内容才显示)
+  ai.reasoning = ''
+  ai.reasoningOpen = true
   abortCtrl = new AbortController()
   try {
+    // 发送前剔除"空内容 assistant"占位消息(当前轮流式占位)。
+    // 否则 DeepSeek 看到最后一条 assistant 消息为空且无 reasoning_content,
+    // 会判定为工具轮缺失 reasoning → 400 "reasoning_content must be passed back"
+    const sendMsgs = messages.value.filter(m => !(m.role === 'assistant' && !m.content))
     const res = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gameId: gameId.value || null, conversationId: activeConvId.value || null, messages: messages.value }),
+      body: JSON.stringify({ gameId: gameId.value || null, conversationId: activeConvId.value || null, modelId: modelId.value, messages: sendMsgs }),
       signal: abortCtrl.signal
     })
     if (!res.ok || !res.body) throw new Error('HTTP ' + res.status)
@@ -218,7 +241,15 @@ async function send() {
             } else if (currentEvent === 'references') {
               ai.references = parseRefs(data)
               currentEvent = ''
+            } else if (currentEvent === 'reasoning') {
+              // 思考过程(仅深度思考模型):累积,灰色折叠区渲染
+              ai.reasoning += data
+              currentEvent = ''
             } else {
+              // 思考结束后自动收起折叠区,专注最终答案
+              if (ai.reasoning && ai.reasoningOpen && !ai.content) {
+                ai.reasoningOpen = false
+              }
               ai.content += data
             }
           }
@@ -379,7 +410,7 @@ onMounted(async () => {
     <div class="chat-col">
       <div class="game-bar">
         <span class="game-label">当前游戏</span>
-        <el-select v-model="gameId" clearable placeholder="通用(不检索知识库)" style="width: 200px">
+        <el-select v-model="gameId" clearable placeholder="通用(不检索知识库)" style="width: 180px">
           <el-option v-for="g in games" :key="g.id" :label="g.name" :value="g.id" />
         </el-select>
         <el-tooltip content="刷新游戏列表">
@@ -388,11 +419,27 @@ onMounted(async () => {
           </el-button>
         </el-tooltip>
         <span class="game-hint">回答将基于该游戏知识库</span>
+        <span class="bar-spacer"></span>
+        <el-select v-model="modelId" style="width: 150px" size="small">
+          <el-option v-for="mo in modelOptions" :key="mo.id" :label="mo.label" :value="mo.id">
+            <span>{{ mo.label }}</span>
+            <span class="model-hint">{{ mo.hint }}</span>
+          </el-option>
+        </el-select>
       </div>
 
       <main ref="listEl" class="msg-list">
         <div v-for="(m, i) in messages" :key="i" class="msg-wrap" :class="m.role">
           <div class="bubble" :class="{ err: m.error }">
+            <!-- 思考过程折叠区:仅深度思考模型的回复 -->
+            <div v-if="m.role === 'assistant' && m.reasoning" class="reasoning-block">
+              <button class="reasoning-toggle" @click="m.reasoningOpen = !m.reasoningOpen">
+                <span class="reasoning-arrow" :class="{ open: m.reasoningOpen }">▸</span>
+                <span class="reasoning-label">🤔 思考过程</span>
+                <span class="reasoning-state">{{ m.reasoningOpen ? '收起' : '展开' }}</span>
+              </button>
+              <div v-if="m.reasoningOpen" class="reasoning-content">{{ m.reasoning }}</div>
+            </div>
             <Markdown v-if="m.role === 'assistant' && !m.error" :source="m.content" />
             <template v-else>{{ m.content }}</template>
             <span v-if="loading && m === messages[messages.length - 1]" class="caret"></span>
@@ -551,6 +598,46 @@ onMounted(async () => {
 .game-label { font-size: 14px; color: var(--text-2); }
 .refresh-btn { margin-left: 2px; }
 .game-hint { font-size: 13px; color: var(--text-3); }
+.bar-spacer { flex: 1; }
+.model-hint { color: var(--text-3); font-size: 12px; margin-left: 8px; }
+
+/* 思考过程折叠区(深度思考模型) */
+.reasoning-block {
+  margin: 2px 0 10px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.reasoning-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 13px;
+  font-family: inherit;
+}
+.reasoning-toggle:hover { color: var(--text-1); }
+.reasoning-arrow { display: inline-block; transition: transform 0.2s; font-size: 12px; }
+.reasoning-arrow.open { transform: rotate(90deg); }
+.reasoning-label { font-weight: 500; }
+.reasoning-state { margin-left: auto; font-size: 12px; color: var(--text-3); }
+.reasoning-content {
+  padding: 8px 12px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-top: 0.5px solid var(--border);
+  max-height: 240px;
+  overflow-y: auto;
+}
 
 .msg-list {
   flex: 1;

@@ -252,9 +252,9 @@ async function addCopyButtons() {
 
 .markdown-body p { margin: 4px 0; line-height: normal; overflow-wrap: anywhere; }
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 2px 0 6px; font-weight: 500; }
-.markdown-body h1 { font-size: 20px; }
-.markdown-body h2 { font-size: 19px; }
-.markdown-body h3 { font-size: 17px; }
+.markdown-body h1 { font-size: 15px; }
+.markdown-body h2 { font-size: 15px; }
+.markdown-body h3 { font-size: 15px; }
 
 /* 列表:彻底去掉圆点/数字标记,保留缩进 */
 .markdown-body ul, .markdown-body ol { margin: 0 0; padding-left: 16px; list-style: none; line-height: 0;}
