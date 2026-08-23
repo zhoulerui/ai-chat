@@ -10,7 +10,7 @@ spring:
   ai:
     # DeepSeek 原生供应商(spring-ai-starter-model-deepseek,1.1.x)
     deepseek:
-      api-key: ${AI_API_KEY:sk-b7405a645ad84df1b93bdefc433aa66d}
+      api-key: ${AI_API_KEY:}
       chat:
         options:
           # 默认快速档;深度思考档(deepseek-v4-flash)由前端 modelId=deep 切换
