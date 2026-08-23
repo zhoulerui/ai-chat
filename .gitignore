@@ -9,6 +9,12 @@ backend/target/
 *.log
 *.tmp
 
+# ---- logback 日志 ----
+backend/logs
+
+# ---- doc文件夹 ----
+backend/doc
+
 # ---- IDE / 系统 ----
 .idea/
 *.iml
