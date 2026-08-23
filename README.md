@@ -15,6 +15,7 @@
 - **URL 网页一键入库**(jsoup 抓取 + SSRF 防护);本地支持 txt/md/pdf/docx/xlsx
 - **回答渲染**:Markdown 宽容预处理、代码高亮 + 复制按钮、Mermaid 图表
 - **Agent 工具调用(Function Calling)**:模型按需自动调用真实工具——按游戏名检索知识库 / 列游戏清单 / 查游戏基本信息(Spring AI `@Tool`)
+- **模型档位切换**:⚡快速(deepseek-chat)/ 🧠深度思考(deepseek-v4-flash)/ 🚀Pro深度思考(deepseek-v4-pro),思考档流式展示推理过程(灰色折叠区)
 - **参考来源侧栏**:条目名 + 相似度百分比 + 可展开完整正文
 - Vue3 + Element Plus + vue-router(hash)响应式 UI(PC / 移动端),支持停止生成 / 复制 / 语音对话
 - 单 jar 部署,`mem_limit: 400m` 即可运行

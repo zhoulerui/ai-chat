@@ -12,9 +12,12 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.deepseek.DeepSeekAssistantMessage;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,6 +62,14 @@ public class ChatController {
     private final ConversationService conversationService;
     private final ToolCallbackProvider toolCallbackProvider;
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /** 模型档位:ai-chat.models.*(yml 配置),前端 modelId 映射到实际 DeepSeek 模型名 */
+    @Value("${ai-chat.models.fast:deepseek-chat}")
+    private String fastModel;
+    @Value("${ai-chat.models.deep:deepseek-v4-flash}")
+    private String deepModel;
+    @Value("${ai-chat.models.pro:deepseek-v4-pro}")
+    private String proModel;
 
     public ChatController(ChatModel chatModel, RagService ragService,
                           ConversationService conversationService,
@@ -118,7 +129,21 @@ public class ChatController {
         List<Message> messages = new ArrayList<>();
         String question = lastUserMessage(request.messages());
         StringBuilder answer = new StringBuilder();
+        StringBuilder reasoning = new StringBuilder();
         List<Map<String, Object>> refs = new ArrayList<>();
+
+        // 诊断:记录本次请求的消息构成(角色 + 是否带思考 + content 长度),排查 400 用
+        log.info("stream 请求: modelId={} gameId={} convId={} messages={}",
+                request.modelId(), request.gameId(), request.conversationId(),
+                request.messages().stream()
+                        .map(m -> m.role()
+                                + (m.reasoning() != null && !m.reasoning().isBlank() ? "[R]" : "")
+                                + (m.content() != null ? ":" + m.content().length() : ""))
+                        .toList());
+
+        // 引导模型用中文思考:thinking 档(reasoning_content)默认用英文内心独白,
+        // 显式指令可让其改用中文(实测 DeepSeek 会遵守;fast 档无思考,无副作用)
+        messages.add(new SystemMessage("请用中文进行思考与推理,最终回答使用中文。"));
 
         // RAG:带 gameId 时,以最后一条用户消息为问题,检索知识库拼进 SystemMessage,
         // 并把参考来源通过 references 事件推给前端(侧边栏展示)
@@ -147,18 +172,10 @@ public class ChatController {
         }
         request.messages().stream()
                 .map(this::toSpringMessage)
+                .filter(java.util.Objects::nonNull)   // 防御:跳过空占位 assistant 消息
                 .forEach(messages::add);
 
-        Flux<String> tokens = chatModel.stream(new Prompt(messages, buildToolOptions()))
-                // mapNotNull:流式最后一个 chunk 通常没有文本(只带 finish_reason/usage),
-                // getText() 会返回 null,而 map() 不允许返回 null,必须用 mapNotNull 跳过
-                .mapNotNull(response -> {
-                    if (response.getResult() == null || response.getResult().getOutput() == null) {
-                        return null;
-                    }
-                    String text = response.getResult().getOutput().getText();
-                    return (text == null || text.isBlank()) ? null : text;
-                });
+        Flux<ChatResponse> responses = chatModel.stream(new Prompt(messages, buildToolOptions(resolveModel(request.modelId()))));
 
         // 落库只执行一次(正常完成/异常/客户端断开任一触发)
         AtomicBoolean saved = new AtomicBoolean(false);
@@ -170,23 +187,52 @@ public class ChatController {
                 return;
             }
             try {
-                String refsJson = refs.isEmpty() ? null : MAPPER.writeValueAsString(refs);
+                // 参考来源 + 思考过程统一存 references_json:
+                // 新格式 {"references":[...], "reasoning":"..."}(旧版是裸数组,前端兼容解析)
+                String rsn = reasoning.toString();
+                Map<String, Object> refsPayload = Map.of(
+                        "references", refs,
+                        "reasoning", (rsn == null || rsn.isBlank()) ? "" : rsn);
+                String refsJson = MAPPER.writeValueAsString(refsPayload);
                 conversationService.appendExchange(
                         request.conversationId(), question, answer.toString(), refsJson);
-                log.info("会话 #{} 已落库:问题[{}] 回答 {} 字符",
-                        request.conversationId(), question, answer.length());
+                log.info("会话 #{} 已落库:问题[{}] 回答 {} 字符,思考 {} 字符",
+                        request.conversationId(), question, answer.length(), rsn.length());
             } catch (Exception e) {
                 log.warn("会话消息落库失败: conversationId={} err={}", request.conversationId(), e.getMessage());
             }
         };
 
-        Disposable disposable = tokens.subscribe(
-                token -> {
-                    answer.append(token);
-                    safeSend(emitter, token);
+        Disposable disposable = responses.subscribe(
+                resp -> {
+                    if (resp.getResult() == null || resp.getResult().getOutput() == null) {
+                        return;
+                    }
+                    var out = resp.getResult().getOutput();
+                    // 思考过程(仅 DeepSeek thinking 模型有):单独事件,前端灰色折叠区渲染
+                    if (out instanceof DeepSeekAssistantMessage dm) {
+                        String r = dm.getReasoningContent();
+                        if (r != null && !r.isBlank()) {
+                            reasoning.append(r);
+                            sendEvent(emitter, "reasoning", r);
+                        }
+                    }
+                    String text = out.getText();
+                    if (text != null && !text.isBlank()) {
+                        answer.append(text);
+                        safeSend(emitter, text);
+                    }
                 },
                 error -> {
-                    sendEvent(emitter, "error", error.getMessage());
+                    // 优先展示 API 返回的具体错误(400/401/429 等带响应体,含原因)
+                    String msg = error.getMessage();
+                    if (error instanceof org.springframework.web.reactive.function.client.WebClientResponseException we) {
+                        msg = we.getStatusCode() + " " + we.getResponseBodyAsString();
+                        log.error("LLM 调用失败(status={}): {}", we.getStatusCode(), we.getResponseBodyAsString());
+                    } else {
+                        log.error("LLM 调用失败: {}", error.getMessage());
+                    }
+                    sendEvent(emitter, "error", msg);
                     persist.run();
                     emitter.complete();
                 },
@@ -209,22 +255,60 @@ public class ChatController {
     }
 
     /**
-     * 挂载 Agent 工具(Function Calling):
-     * 模型按需调用 GameTools(@Tool 方法),Spring AI 1.0 在流式过程中自动执行
+     * 挂载 Agent 工具(Function Calling)+ 模型档位:
+     * 模型按需调用 GameTools(@Tool 方法),Spring AI 在流式过程中自动执行
      * 工具并继续生成最终回答(内部工具调用循环),前端无感知、仍是普通文本流。
      */
-    private ToolCallingChatOptions buildToolOptions() {
+    private ToolCallingChatOptions buildToolOptions(String model) {
         return ToolCallingChatOptions.builder()
+                .model(model)
                 .toolCallbacks(toolCallbackProvider.getToolCallbacks())
                 .build();
     }
 
+    /** modelId → 实际模型名;未知档位回退快速档 */
+    private String resolveModel(String modelId) {
+        return switch (modelId == null ? "fast" : modelId) {
+            case "deep" -> deepModel;
+            case "pro" -> proModel;
+            default -> fastModel;
+        };
+    }
+
     private Message toSpringMessage(ChatMessageDto dto) {
+        // 防御:跳过 content 为空的 assistant 占位消息(前端已过滤,双保险)
+        if ("assistant".equals(dto.role())
+                && (dto.content() == null || dto.content().isBlank())) {
+            return null;
+        }
         return switch (dto.role()) {
             case "system" -> new SystemMessage(dto.content());
-            case "assistant" -> new AssistantMessage(dto.content());
+            case "assistant" -> {
+                // 跨轮回传思考过程:thinking 模型做过工具调用的轮次必须回传
+                // reasoning_content(无工具调用时传了会被 API 忽略,无条件回传最稳)
+                if (dto.reasoning() != null && !dto.reasoning().isBlank()) {
+                    yield assistantWithReasoning(dto.content(), dto.reasoning());
+                }
+                yield new AssistantMessage(dto.content());
+            }
             default -> new UserMessage(dto.content());
         };
+    }
+
+    /**
+     * 构造带 reasoning_content 的 assistant 消息(prefix=false,普通历史消息)。
+     * 不能用 prefixAssistantMessage(它把 prefix 置 true,DeepSeek 拒绝非末尾消息带 prefix)。
+     */
+    private static Message assistantWithReasoning(String content, String reasoning) {
+        try {
+            var ctor = DeepSeekAssistantMessage.class.getDeclaredConstructor(
+                    String.class, String.class, Boolean.class, Map.class, List.class, List.class);
+            ctor.setAccessible(true);
+            return ctor.newInstance(content, reasoning, Boolean.FALSE, null, null, null);
+        } catch (Exception e) {
+            log.warn("构造 DeepSeekAssistantMessage 失败,退回普通消息: {}", e.getMessage());
+            return new AssistantMessage(content);
+        }
     }
 
     /** 取最后一条用户消息作为检索问题 */

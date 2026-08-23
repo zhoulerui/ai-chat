@@ -8,13 +8,13 @@ spring:
   application:
     name: oracle-games   # 神谕百科 Oracle of Games
   ai:
-    openai:
-      # OpenAI 兼容接口:DeepSeek / 通义 / Kimi / 硅基流动 等均可
-      base-url: ${AI_BASE_URL:https://api.deepseek.com}
+    # DeepSeek 原生供应商(spring-ai-starter-model-deepseek,1.1.x)
+    deepseek:
       api-key: ${AI_API_KEY:sk-b7405a645ad84df1b93bdefc433aa66d}
       chat:
         options:
-          model: ${AI_MODEL:deepseek-v4-flash}
+          # 默认快速档;深度思考档(deepseek-v4-flash)由前端 modelId=deep 切换
+          model: ${AI_MODEL:deepseek-chat}
           temperature: 0.7
           max-tokens: 2048
   # 生产数据库(MySQL)。本地验证用 application-local.yml(H2)
@@ -41,7 +41,7 @@ spring:
 # 生产环境想关闭,把 enabled 改成 false 即可(需重新打包)
 springdoc:
   api-docs:
-    enabled: false
+    enabled: true
   swagger-ui:
     path: /swagger-ui.html
 
@@ -50,6 +50,13 @@ ai-chat:
   onnx:
     model-path: ${AI_MODEL_PATH:/opt/ai-chat/models/bge-small-zh-v1.5/model.onnx}
     tokenizer-path: ${AI_TOKENIZER_PATH:/opt/ai-chat/models/bge-small-zh-v1.5/tokenizer.json}
+  # 模型档位:前端 modelId → DeepSeek 模型名(可扩展更多档位)
+  # 注意:deepseek-v4-flash / deepseek-v4-pro 思考模式默认开启(官网默认),
+  # 无需额外参数即返回 reasoning_content;deepseek-chat 为非思考档。
+  models:
+    fast: deepseek-chat
+    deep: deepseek-v4-flash
+    pro: deepseek-v4-pro
 
 # MyBatis
 mybatis:
@@ -62,6 +69,10 @@ logging:
   level:
     root: info
     com.example.aichat: debug          # 业务日志 + MyBatis SQL 日志(debug 时打印)
+  # 强制 UTF-8 输出,避免 Windows(JVM 默认 GBK)下 IDEA 控制台中文乱码
+  charset:
+    console: UTF-8
+    file: UTF-8
   # 日志落盘:默认 /opt/ai-chat/logs/ai-chat.log(Docker 部署时由 compose volume 挂到宿主机,
   # 宿主 tail -f 即可查看);本地开发用 application-local.yml 覆盖为相对路径 logs/。
   # 可用环境变量 AI_LOG_PATH 覆盖。
