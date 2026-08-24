@@ -29,10 +29,11 @@ services:
       - default
       - you-mysql-net        # 与 you-mysql 同网络,容器名直连
     environment:
-      # ↓↓↓ 按你的服务器实际值修改 ↓↓↓
+      # 凭据一律从服务器环境变量注入,禁止提交真实值到版本库!
+      # 部署前:export MYSQL_PASSWORD=你的密码
       MYSQL_URL: "jdbc:mysql://you-mysql:3306/ai_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
       MYSQL_USER: "root"
-      MYSQL_PASSWORD: "zlr930707"     # ← you-mysql 的 root 密码(必填)
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:?请设置 MYSQL_PASSWORD 环境变量}"
     mem_limit: 400m           # 容器内存上限,保护 2G 小服务器
     restart: unless-stopped
 
