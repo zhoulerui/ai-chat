@@ -10,7 +10,7 @@ spring:
   ai:
     # DeepSeek 原生供应商(spring-ai-starter-model-deepseek,1.1.x)
     deepseek:
-      api-key: ${AI_API_KEY:}
+      api-key: ${AI_API_KEY}
       chat:
         options:
           # 默认快速档;深度思考档(deepseek-v4-flash)由前端 modelId=deep 切换
@@ -25,8 +25,8 @@ spring:
   # "Unsupported character encoding 'utf8mb4'"(utf8mb4 不是 Java 字符集名)。
   datasource:
     url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
-    username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD:}
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:

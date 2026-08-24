@@ -17,3 +17,5 @@ ai-chat:
 logging:
   file:
     name: logs/ai-chat.log
+  level:
+    org.springframework.ai: DEBUG
