@@ -13,7 +13,10 @@ import com.example.aichat.entity.Conversation;
 import com.example.aichat.mapper.ChatMessageMapper;
 import com.example.aichat.mapper.ConversationMapper;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class ConversationServiceImpl implements ConversationService {
 
     private static final Logger log = LoggerFactory.getLogger(ConversationServiceImpl.class);
@@ -22,12 +25,6 @@ public class ConversationServiceImpl implements ConversationService {
 
     private final ConversationMapper conversationMapper;
     private final ChatMessageMapper chatMessageMapper;
-
-    public ConversationServiceImpl(ConversationMapper conversationMapper,
-                                   ChatMessageMapper chatMessageMapper) {
-        this.conversationMapper = conversationMapper;
-        this.chatMessageMapper = chatMessageMapper;
-    }
 
     @Override
     public List<ConversationDto> listConversations() {

@@ -10,6 +10,8 @@ import com.example.aichat.mapper.GameMapper;
 import com.example.aichat.rag.ChunkHit;
 import com.example.aichat.rag.RagService;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * Agent 工具(Function Calling):让大模型在回答时能主动调用真实业务能力。
  * 由 config/ToolConfig 注册为 ToolCallbackProvider,经 ChatController 的
@@ -22,15 +24,11 @@ import com.example.aichat.rag.RagService;
  *  - getGameInfo:查询游戏基本信息
  */
 @Component
+@RequiredArgsConstructor
 public class GameTools {
 
     private final RagService ragService;
     private final GameMapper gameMapper;
-
-    public GameTools(RagService ragService, GameMapper gameMapper) {
-        this.ragService = ragService;
-        this.gameMapper = gameMapper;
-    }
 
     /**
      * 按需检索知识库:传入游戏名称与具体问题,返回与问题相关的资料片段(含相关度)。

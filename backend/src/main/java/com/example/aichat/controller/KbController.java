@@ -21,6 +21,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.server.ResponseStatusException;
 
+import lombok.RequiredArgsConstructor;
+
 import com.example.aichat.dto.ArticleItem;
 import com.example.aichat.entity.Chunk;
 import com.example.aichat.entity.Game;
@@ -37,6 +39,7 @@ import com.example.aichat.util.UrlImporter;
 @Tag(name = "知识库", description = "游戏管理 / 条目 / 分块 / 检索 / 网址一键入库")
 @RestController
 @RequestMapping("/api/kb")
+@RequiredArgsConstructor
 public class KbController {
 
     private static final Logger log = LoggerFactory.getLogger(KbController.class);
@@ -44,12 +47,6 @@ public class KbController {
     private final GameMapper gameMapper;
     private final ArticleMapper articleMapper;
     private final RagService ragService;
-
-    public KbController(GameMapper gameMapper, ArticleMapper articleMapper, RagService ragService) {
-        this.gameMapper = gameMapper;
-        this.articleMapper = articleMapper;
-        this.ragService = ragService;
-    }
 
     // ---------- 游戏 ----------
 

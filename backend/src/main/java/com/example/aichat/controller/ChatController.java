@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import lombok.RequiredArgsConstructor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -53,6 +54,7 @@ import reactor.core.publisher.Flux;
 @Tag(name = "智能问答", description = "SSE 流式问答 + 多会话管理")
 @RestController
 @RequestMapping("/api/chat")
+@RequiredArgsConstructor
 public class ChatController {
 
     private static final Logger log = LoggerFactory.getLogger(ChatController.class);
@@ -70,15 +72,6 @@ public class ChatController {
     private String deepModel;
     @Value("${ai-chat.models.pro:deepseek-v4-pro}")
     private String proModel;
-
-    public ChatController(ChatModel chatModel, RagService ragService,
-                          ConversationService conversationService,
-                          ToolCallbackProvider toolCallbackProvider) {
-        this.chatModel = chatModel;
-        this.ragService = ragService;
-        this.conversationService = conversationService;
-        this.toolCallbackProvider = toolCallbackProvider;
-    }
 
     // ---------- 会话管理 ----------
 

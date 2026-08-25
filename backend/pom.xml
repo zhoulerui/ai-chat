@@ -27,6 +27,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- Lombok:自动生成构造器(@RequiredArgsConstructor)等样板代码;
+             版本由 spring-boot-dependencies 管理 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
         <!-- DeepSeek 原生供应商(1.1.x 官方模块):
              支持 reasoning_content(思考过程)获取与工具调用时的正确回传,
              替代 OpenAI 兼容层(兼容层无法处理 DeepSeek thinking 模型的回传要求) -->

@@ -25,6 +25,7 @@ import com.example.aichat.mapper.GameMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 
 /**
  * RAG 核心服务实现(手动拼接版,便于理解与调优)。
@@ -32,6 +33,7 @@ import jakarta.annotation.PostConstruct;
  * 嵌入:本地 ONNX bge-small-zh(512 维)。
  */
 @Service
+@RequiredArgsConstructor
 public class RagServiceImpl implements RagService {
 
     private static final Logger log = LoggerFactory.getLogger(RagServiceImpl.class);
@@ -44,19 +46,9 @@ public class RagServiceImpl implements RagService {
     private final ChunkMapper chunkMapper;
     private final ArticleMapper articleMapper;
     private final GameMapper gameMapper;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper();   // 自带初始化,不参与注入
 
     private SimpleVectorStore store;
-
-    public RagServiceImpl(LocalBgeEmbeddingModel embeddingModel,
-                          ChunkMapper chunkMapper,
-                          ArticleMapper articleMapper,
-                          GameMapper gameMapper) {
-        this.embeddingModel = embeddingModel;
-        this.chunkMapper = chunkMapper;
-        this.articleMapper = articleMapper;
-        this.gameMapper = gameMapper;
-    }
 
     /** 启动时从数据库加载全量分块进内存向量库(重启不丢知识) */
     @PostConstruct
