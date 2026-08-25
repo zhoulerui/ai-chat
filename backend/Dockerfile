@@ -15,6 +15,6 @@ COPY target/ai-chat.jar app.jar
 EXPOSE 8080
 
 # 低内存优化参数(与裸机部署一致),可用 -e JAVA_OPTS="..." 覆盖
-ENV JAVA_OPTS="-Xms64m -Xmx192m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC"
+ENV JAVA_OPTS="-Xms64m -Xmx192m -XX:MaxMetaspaceSize=160m -XX:+UseSerialGC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof"
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
