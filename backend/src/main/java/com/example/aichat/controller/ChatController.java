@@ -63,6 +63,7 @@ public class ChatController {
     private final RagService ragService;
     private final ConversationService conversationService;
     private final ToolCallbackProvider toolCallbackProvider;
+    private final com.example.aichat.config.LlmCircuitBreaker circuitBreaker;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** 模型档位:ai-chat.models.*(yml 配置),前端 modelId 映射到实际 DeepSeek 模型名 */
@@ -118,6 +119,13 @@ public class ChatController {
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestBody ChatRequestDto request) {
         SseEmitter emitter = new SseEmitter(0L); // 0 = 不超时,等待模型输出
+
+        // 熔断:上游(DeepSeek)连续失败短路期间,快速失败,不再请求
+        if (circuitBreaker.isOpen()) {
+            sendEvent(emitter, "error", "模型服务暂时不可用,请稍后再试");
+            emitter.complete();
+            return emitter;
+        }
 
         List<Message> messages = new ArrayList<>();
         String question = lastUserMessage(request.messages());
@@ -222,6 +230,13 @@ public class ChatController {
                     if (error instanceof org.springframework.web.reactive.function.client.WebClientResponseException we) {
                         msg = we.getStatusCode() + " " + we.getResponseBodyAsString();
                         log.error("LLM 调用失败(status={}): {}", we.getStatusCode(), we.getResponseBodyAsString());
+                        // 上游明确失败(鉴权/余额/限流/5xx)计入熔断
+                        int code = we.getStatusCode().value();
+                        if (code == 401 || code == 402 || code == 429 || code >= 500) {
+                            circuitBreaker.onFailure();
+                        } else {
+                            circuitBreaker.onSuccess();   // 4xx 业务参数错误不熔断,视为正常
+                        }
                     } else {
                         log.error("LLM 调用失败: {}", error.getMessage());
                     }
@@ -230,6 +245,7 @@ public class ChatController {
                     emitter.complete();
                 },
                 () -> {
+                    circuitBreaker.onSuccess();   // 完整流式输出 = 上游成功,熔断复位
                     persist.run();
                     emitter.complete();
                 });

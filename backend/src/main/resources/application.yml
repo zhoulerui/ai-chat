@@ -57,6 +57,14 @@ ai-chat:
     fast: deepseek-chat
     deep: deepseek-v4-flash
     pro: deepseek-v4-pro
+  # 公网防护:限流(IP 频率)+ 熔断(上游失败短路)
+  ratelimit:
+    enabled: true
+    per-ip-per-minute: 3        # 单 IP 每分钟请求上限(防刷烧钱)
+  circuit-breaker:
+    enabled: true
+    failure-threshold: 5         # 连续失败次数达到后短路
+    open-duration-ms: 30000      # 短路时长(毫秒),到期放行试探
 
 # MyBatis
 mybatis:
