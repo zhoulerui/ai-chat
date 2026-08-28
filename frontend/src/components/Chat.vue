@@ -214,7 +214,10 @@ async function send() {
       body: JSON.stringify({ gameId: gameId.value || null, conversationId: activeConvId.value || null, modelId: modelId.value, messages: sendMsgs }),
       signal: abortCtrl.signal
     })
-    if (!res.ok || !res.body) throw new Error('HTTP ' + res.status)
+    if (!res.ok || !res.body) {
+      if (res.status === 429) throw new Error('请求过于频繁,请稍后再试')
+      throw new Error('HTTP ' + res.status)
+    }
 
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
