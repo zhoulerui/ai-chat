@@ -1,12 +1,17 @@
 # 本地验证用:H2 内存库 + 本地模型路径
 # 启动:java -jar ai-chat.jar --spring.profiles.active=local
-# INIT:建 ai_chat schema 并设为默认(与 schema.sql 的库名前缀配套)
+# 走 dynamic-datasource 单源(h2),表直接建在当前库(见 schema.sql)
 spring:
   datasource:
-    url: jdbc:h2:mem:ai_chat;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;INIT=CREATE SCHEMA IF NOT EXISTS ai_chat\;SET SCHEMA ai_chat
-    username: sa
-    password: ""
-    driver-class-name: org.h2.Driver
+    dynamic:
+      primary: h2
+      strict: false
+      datasource:
+        h2:
+          url: jdbc:h2:mem:ai_chat;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+          username: sa
+          password: ""
+          driver-class-name: org.h2.Driver
 
 ai-chat:
   onnx:

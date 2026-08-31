@@ -61,11 +61,18 @@
             <artifactId>tokenizers</artifactId>
             <version>0.20.0</version>
         </dependency>
-        <!-- 持久化:MyBatis(内含 JDBC/连接池),生产 MySQL,本地验证用 H2 -->
+        <!-- 持久化:MyBatis(Spring Boot 3 版,提供 mybatis 核心与自动配置) -->
         <dependency>
             <groupId>org.mybatis.spring.boot</groupId>
             <artifactId>mybatis-spring-boot-starter</artifactId>
             <version>3.0.4</version>
+        </dependency>
+        <!-- 多数据源:dynamic-datasource boot3(与 mybatis-spring-boot-starter 3.x 配套,
+             自动协调 SqlSessionFactory;@DS 切换,dev 与 prod 双库) -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>dynamic-datasource-spring-boot3-starter</artifactId>
+            <version>4.3.0</version>
         </dependency>
         <dependency>
             <groupId>com.mysql</groupId>

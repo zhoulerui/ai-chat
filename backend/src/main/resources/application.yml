@@ -17,20 +17,36 @@ spring:
           model: ${AI_MODEL:deepseek-chat}
           temperature: 0.7
           max-tokens: 2048
-  # 生产数据库(MySQL)。本地验证用 application-local.yml(H2)
-  # 首次部署需在 MySQL 建库(或手动执行,账号需建库权限):
-  #   CREATE DATABASE IF NOT EXISTS ai_chat CHARACTER SET utf8mb4;
+  # 多数据源(dynamic-datasource):prod(生产)与 dev(测试)双库。
+  #  - 默认路由 primary;部署时可用环境变量 PRIMARY_DS 切换(dev 环境设 PRIMARY_DS=dev)
+  #  - 代码内可用 @DS("dev"/"prod") 精确切换(见 Mapper/Service)
+  #  - SQL 不带库名前缀,库由各连接串指定(见 schema.sql 顶部说明)
+  # 首次部署需建库(账号需建库权限):
+  #   CREATE DATABASE IF NOT EXISTS ai_chat     CHARACTER SET utf8mb4;   -- prod
+  #   CREATE DATABASE IF NOT EXISTS ai_chat_dev CHARACTER SET utf8mb4;   -- dev
   # 注意:characterEncoding 只接受 Java 字符集名(utf8/UTF-8),Connector/J 9.x
   # 会与服务器协商为 utf8mb4(emoji 正常);写 utf8mb4 会报
   # "Unsupported character encoding 'utf8mb4'"(utf8mb4 不是 Java 字符集名)。
   datasource:
-    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    dynamic:
+      # lazy:非 primary 数据源按需初始化(配合 profile 合并,local 下不会去连 prod/dev)
+      lazy: true
+      primary: ${PRIMARY_DS:prod}
+      strict: false                      # false:未匹配到数据源时回退 primary
+      datasource:
+        prod:
+          url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai_chat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+          username: ${MYSQL_USER}
+          password: ${MYSQL_PASSWORD}
+          driver-class-name: com.mysql.cj.jdbc.Driver
+        dev:
+          url: ${DEV_MYSQL_URL:jdbc:mysql://localhost:3306/ai_chat_dev?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+          username: ${DEV_MYSQL_USER:root}
+          password: ${DEV_MYSQL_PASSWORD:}
+          driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:
-      mode: always          # 启动时执行 schema.sql(建表,幂等)
+      mode: always          # 启动时对 primary 数据源执行 schema.sql(建表,幂等)
   servlet:
     multipart:
       max-file-size: 20MB   # 单个上传文件上限(PDF/文档可能较大)

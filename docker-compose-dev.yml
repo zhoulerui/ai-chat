@@ -1,0 +1,45 @@
+# ai-chat Dev 环境 Compose(测试库 ai_chat_dev,端口 8083)
+# 与生产(ai-chat / 8082)并行,互不影响。
+#
+# 用法(服务器上):
+#   export AI_API_KEY=sk-xxx
+#   export DEV_MYSQL_PASSWORD=你的MySQL密码
+#   docker compose -f docker-compose-dev.yml up -d
+#
+# 首次启动会自动对 dev 库执行 schema.sql 建表(primary=dev)。
+# 若镜像 ai-chat:1.0.0 已在服务器(生产构建过),无需 --build;
+# 否则先 cd /opt/ai-chat && docker compose build,或下方用 build: ./backend
+services:
+  ai-chat-dev:
+    build: ./backend
+    image: ai-chat:1.0.0
+    container_name: ai-chat-dev
+    ports:
+      - "8083:8080"          # 宿主机 8083 -> 容器 8080(dev)
+    volumes:
+      - /opt/ai-chat/models:/opt/ai-chat/models        # 模型与生产共用(同一份,省磁盘)
+      - /opt/ai-chat-dev/logs:/opt/ai-chat/logs        # dev 独立日志目录
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+    networks:
+      - default
+      - you-mysql-net        # 与 you-mysql 同网络,容器名直连(同生产)
+    environment:
+      # 切到 dev 数据源(ai_chat_dev 库)
+      PRIMARY_DS: "dev"
+      # 凭据一律从服务器环境变量注入,禁止提交真实值
+      AI_API_KEY: "${AI_API_KEY:?请设置 AI_API_KEY 环境变量}"
+      DEV_MYSQL_URL: "jdbc:mysql://you-mysql:3306/ai_chat_dev?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+      DEV_MYSQL_USER: "root"
+      DEV_MYSQL_PASSWORD: "${DEV_MYSQL_PASSWORD:?请设置 DEV_MYSQL_PASSWORD 环境变量}"
+    mem_limit: 400m           # 与生产相同,2G 服务器可并行两套
+    restart: unless-stopped
+
+networks:
+  default: {}
+  you-mysql-net:
+    external: true
+    name: ai-chat_default        # ← 改成你服务器的 you-mysql 网络名(同生产 compose)

@@ -247,18 +247,22 @@ POST   /api/kb/search             检索测试 {gameId, query, topK}(含完整�
 POST   /api/kb/import-url         网址入库 {gameId, url, title?}(仅公网,SSRF 防护)
 ```
 
-### 数据库
+### 数据库(多数据源)
 
-所有表统一归属独立库 **`ai_chat`**(DDL 均带 `ai_chat.` 前缀,与其他项目表隔离):
+应用基于 **dynamic-datasource** 支持 prod(生产)/ dev(测试)双库,SQL 不带库名前缀,库由连接串指定:
 
 ```sql
--- 首次部署建库(账号需建库权限;schema.sql 顶部也会自动执行该语句)
-CREATE DATABASE IF NOT EXISTS ai_chat CHARACTER SET utf8mb4;
+-- 首次部署建库(账号需建库权限)
+CREATE DATABASE IF NOT EXISTS ai_chat     CHARACTER SET utf8mb4;   -- prod
+CREATE DATABASE IF NOT EXISTS ai_chat_dev CHARACTER SET utf8mb4;   -- dev
 ```
 
-- 表结构见 `backend/src/main/resources/schema.sql`(幂等,应用启动自动执行):`ai_chat.game` / `ai_chat.article` / `ai_chat.chunk` / `ai_chat.conversation` / `ai_chat.chat_message`;
-- 生产连接串默认 `jdbc:mysql://localhost:3306/ai_chat`,可用环境变量 `MYSQL_URL` 覆盖(务必指向 `ai_chat` 库,或改库名后同步改前缀);
-- 本地 H2 开发:连接串已带 `INIT=CREATE SCHEMA IF NOT EXISTS ai_chat;SET SCHEMA ai_chat`,与 schema.sql 前缀配套。
+- 表结构见 `backend/src/main/resources/schema.sql`(幂等,启动时对 primary 数据源自动执行):`game` / `article` / `chunk` / `conversation` / `chat_message`;
+- 数据源配置:`spring.datasource.dynamic`(`lazy: true`,非 primary 源按需初始化);
+- **切换环境**:环境变量 `PRIMARY_DS=dev|prod`(默认 prod),无需改代码;
+- 生产连接串默认 `jdbc:mysql://localhost:3306/ai_chat`,可用 `MYSQL_URL` 覆盖;dev 源用 `DEV_MYSQL_URL`(默认指向 `ai_chat_dev`);
+- 代码内精确切换:`@DS("dev")` / `@DS("prod")` 注解(注意:与 `@Transactional` 同用时先切源再开事务);
+- 本地 H2 开发:`application-local.yml` 走 dynamic 单源(h2),表直接建在当前库。
 
 ## 安全与隐私
 

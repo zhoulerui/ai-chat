@@ -1,13 +1,14 @@
 -- 游戏百科知识库表结构(幂等,可重复执行)
 -- 生产 MySQL / 本地 H2(MODE=MySQL)均可执行
 --
--- 所有表统一归属独立库 ai_chat,与其他项目表隔离:
---  - MySQL:CREATE SCHEMA 等价 CREATE DATABASE(需连接账号有建库权限,或提前手工建库);
---  - H2:创建同名 schema(本地连接串需带 INIT=...SET SCHEMA ai_chat,见 application-local.yml)。
+-- 说明:表不带库名前缀,建在"连接串指定的库"上(多数据源/多环境隔离的关键)。
+--  - MySQL:首次使用某库前先建库,再执行本脚本:
+--      CREATE DATABASE IF NOT EXISTS ai_chat_dev CHARACTER SET utf8mb4;
+--      CREATE DATABASE IF NOT EXISTS ai_chat_prod CHARACTER SET utf8mb4;
+--      mysql -u root -p ai_chat_dev < schema.sql
+--  - H2(本地):直接建在当前库,无需 CREATE SCHEMA。
 
-CREATE SCHEMA IF NOT EXISTS ai_chat;
-
-CREATE TABLE IF NOT EXISTS ai_chat.game (
+CREATE TABLE IF NOT EXISTS game (
   id          BIGINT PRIMARY KEY AUTO_INCREMENT,
   name        VARCHAR(100) NOT NULL,
   category    VARCHAR(50),
@@ -18,7 +19,7 @@ CREATE TABLE IF NOT EXISTS ai_chat.game (
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS ai_chat.article (
+CREATE TABLE IF NOT EXISTS article (
   id          BIGINT PRIMARY KEY AUTO_INCREMENT,
   game_id     BIGINT NOT NULL,
   title       VARCHAR(200) NOT NULL,
@@ -29,7 +30,7 @@ CREATE TABLE IF NOT EXISTS ai_chat.article (
   KEY idx_article_game (game_id)
 );
 
-CREATE TABLE IF NOT EXISTS ai_chat.chunk (
+CREATE TABLE IF NOT EXISTS chunk (
   id          BIGINT PRIMARY KEY AUTO_INCREMENT,
   game_id     BIGINT NOT NULL,
   article_id  BIGINT,
@@ -41,7 +42,7 @@ CREATE TABLE IF NOT EXISTS ai_chat.chunk (
 );
 
 -- 多会话(智能问答)
-CREATE TABLE IF NOT EXISTS ai_chat.conversation (
+CREATE TABLE IF NOT EXISTS conversation (
   id          BIGINT PRIMARY KEY AUTO_INCREMENT,
   title       VARCHAR(200) NOT NULL,      -- 默认取首条提问前 20 字
   game_id     BIGINT,                     -- 会话绑定的游戏(空=通用)
@@ -50,7 +51,7 @@ CREATE TABLE IF NOT EXISTS ai_chat.conversation (
 );
 
 -- 会话消息
-CREATE TABLE IF NOT EXISTS ai_chat.chat_message (
+CREATE TABLE IF NOT EXISTS chat_message (
   id              BIGINT PRIMARY KEY AUTO_INCREMENT,
   conversation_id BIGINT NOT NULL,
   role            VARCHAR(20) NOT NULL,   -- user / assistant
