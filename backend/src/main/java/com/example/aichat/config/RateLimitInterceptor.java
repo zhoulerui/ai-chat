@@ -14,7 +14,6 @@ import jakarta.servlet.http.HttpServletResponse;
  *  - ai-chat.ratelimit.mode=redis:Redis 滑动窗口(多实例共享,见 RedisSlidingWindowRateLimiter)
  */
 @Component
-@
 public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final RateLimiter rateLimiter;
