@@ -1,7 +1,5 @@
 package com.example.aichat.config;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -10,24 +8,23 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * 轻量限流(公网防刷):固定窗口计数,按客户端 IP 限流。
- * 超限返回 HTTP 429。单机内存实现,无外部依赖。
- *
- * 配置:ai-chat.ratelimit.enabled / per-ip-per-minute(默认 20 次/分钟/IP)
+ * 公网防刷限流拦截器:按客户端 IP 限流,超限返回 HTTP 429。
+ * 具体算法由 RateLimiter 实现决定:
+ *  - ai-chat.ratelimit.mode=memory(默认):内存固定窗口
+ *  - ai-chat.ratelimit.mode=redis:Redis 滑动窗口(多实例共享,见 RedisSlidingWindowRateLimiter)
  */
 @Component
+@
 public class RateLimitInterceptor implements HandlerInterceptor {
 
-    /** ip -> [窗口起始毫秒, 窗口内计数] */
-    private final ConcurrentHashMap<String, long[]> buckets = new ConcurrentHashMap<>();
+    private final RateLimiter rateLimiter;
 
     @Value("${ai-chat.ratelimit.enabled:true}")
     private boolean enabled;
 
-    @Value("${ai-chat.ratelimit.per-ip-per-minute:20}")
-    private int perIpPerMinute;
-
-    private static final long WINDOW_MS = 60_000L;
+    public RateLimitInterceptor(RateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -35,16 +32,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         if (!enabled) {
             return true;
         }
-        String ip = clientIp(request);
-        long now = System.currentTimeMillis();
-        long[] entry = buckets.compute(ip, (k, v) -> {
-            if (v == null || now - v[0] > WINDOW_MS) {
-                return new long[]{now, 1};
-            }
-            v[1]++;
-            return v;
-        });
-        if (entry[1] > perIpPerMinute) {
+        if (!rateLimiter.tryAcquire(clientIp(request))) {
             response.setStatus(429);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"error\":\"请求过于频繁,请稍后再试\"}");

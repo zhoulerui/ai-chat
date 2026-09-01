@@ -67,6 +67,12 @@
             <artifactId>mybatis-spring-boot-starter</artifactId>
             <version>3.0.4</version>
         </dependency>
+        <!-- Redis(预埋):限流滑动窗口模式(ai-chat.ratelimit.mode=redis)使用。
+             默认 memory 模式不连 Redis,仅引入客户端;切换 redis 模式才需要 Redis 服务 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
         <!-- 多数据源:dynamic-datasource boot3(与 mybatis-spring-boot-starter 3.x 配套,
              自动协调 SqlSessionFactory;@DS 切换,dev 与 prod 双库) -->
         <dependency>

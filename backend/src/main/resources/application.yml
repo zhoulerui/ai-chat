@@ -75,12 +75,25 @@ ai-chat:
     pro: deepseek-v4-pro
   # 公网防护:限流(IP 频率)+ 熔断(上游失败短路)
   ratelimit:
+    # 限流算法:memory=内存固定窗口(默认,零依赖)/ redis=Redis 滑动窗口(多实例共享,
+    # 严格满足"任意 60 秒内 ≤ N 次";切换后需配置下方 spring.data.redis)
+    mode: memory
     enabled: true
     per-ip-per-minute: 3        # 单 IP 每分钟请求上限(防刷烧钱)
   circuit-breaker:
     enabled: true
     failure-threshold: 5         # 连续失败次数达到后短路
     open-duration-ms: 30000      # 短路时长(毫秒),到期放行试探
+
+# Redis(仅限流 mode=redis 时使用;memory 模式可忽略本段)
+# 切换方法:ai-chat.ratelimit.mode 改为 redis,并取消注释下方配置填真实值:
+# spring:
+#   data:
+#     redis:
+#       host: 127.0.0.1
+#       port: 6379
+#       password: 你的redis密码        # 无密码则删除本行
+#       timeout: 3s
 
 # MyBatis
 mybatis:
